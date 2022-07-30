@@ -1,7 +1,7 @@
 #include <iostream>
 #include "tomasulo.h"
 
-#define LOCAL
+//#define LOCAL
 
 int main() {
 
