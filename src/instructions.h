@@ -50,7 +50,7 @@ enum instruction_t {
 };
 
 enum function_t {
-    IMM, JUMP, BRANCH, LOAD, STORE, CALCI, CALC
+    IMM, JUMP, BRANCH, LOAD, STORE, CALCI, CALC, RET
 };
 
 const instruction_t Btype[8] = {BEQ, BNE, WOW, WOW, BLT, BGE, BLTU, BGEU};
@@ -74,6 +74,7 @@ Instruction Decode(uint ins) {
     Instruction cur;
     if (ins == 0x0ff00513) {
         cur.TYPE = HALT;
+		cur.FTYPE = RET;
         return cur;
     }
     uint opcode = ExtractBits(ins, 0, 6), func3;
