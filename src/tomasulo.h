@@ -425,6 +425,7 @@ public:
     }
 
     ~Tomasulo_Simulator() {
+		/*
         std::cerr << "total clk : " << clk << std::endl;
         if (branch_cnt == 0) {
             std::cerr << "no branch" << std::endl;
@@ -432,7 +433,7 @@ public:
             std::cerr << "total branch: " << branch_cnt << std::endl;
             std::cerr << "successful prediction: " << success_cnt << std::endl;
             std::cerr << "success rate: " << 1.0 * success_cnt / branch_cnt << std::endl;
-        }
+        }*/
     }
 
     void input() {
