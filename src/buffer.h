@@ -42,7 +42,7 @@ public:
 struct ROInfo {
     instruction_t op;
     function_t func;
-    uint rd, val, pc;
+    uint rd, val, pc, pred_pc;
     bool ready;
     int lsb_pos, rob_pos;
     ROInfo() {}

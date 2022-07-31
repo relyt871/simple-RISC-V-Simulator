@@ -62,7 +62,7 @@ const instruction_t Rtype[8] = {ADD, SLL, SLT, SLTU, XOR, SRL, OR, AND};
 struct Instruction {
     instruction_t TYPE;
     function_t FTYPE;
-    uint rd, rs1, rs2, imm, pc;
+    uint rd, rs1, rs2, imm, pc, pred_pc;
     Instruction() {}
     Instruction(instruction_t _TYPE, uint _rd, uint _rs1, uint _rs2, uint _imm):
         TYPE(_TYPE), rd(_rd), rs1(_rs1), rs2(_rs2), imm(_imm) {}

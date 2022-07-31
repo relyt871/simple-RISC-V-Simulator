@@ -6,7 +6,7 @@
 int main() {
 
 #ifdef LOCAL
-    freopen("test9.data", "r", stdin);
+    freopen("testcases/bulgarian.data", "r", stdin);
 #endif
 
     Tomasulo_Simulator s;

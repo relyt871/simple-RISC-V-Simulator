@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "buffer.h"
 #include "station.h"
+#include "predictor.h"
 
 #include <iostream>
 #include <vector>
@@ -40,6 +41,8 @@ private:
     vector<RSInfo> newrs, can_exe;
     vector< Pair<int, int> > rf_lock, rf_unlock;
 
+    BranchPredictor predictor;
+    int clk, branch_cnt, success_cnt;
 
     void Update() {
         pre = cur;
@@ -162,8 +165,18 @@ private:
 //std::cerr << std::hex << "fetch " << PC << ' ' << ins.TYPE << std::endl;
         if (ins.TYPE == WOW) return;
         ins.pc = PC;
+        if (ins.FTYPE == BRANCH) {
+            ++branch_cnt;
+            if (predictor.predict(PC)) {
+                PC += ins.imm;
+            } else {
+                PC += 4;
+            }
+            ins.pred_pc = PC;
+        } else {
+            PC += 4;
+        }
         cur.insq.push(ins);
-        PC += 4;
     }
 
     void RunExecute() {
@@ -319,7 +332,7 @@ private:
             u.op = ins.TYPE;
             u.rd = pos;
             u.A = ins.imm;
-            if (ins.TYPE == AUIPC) {
+            if (ins.TYPE == JAL || ins.TYPE == AUIPC) {
                 u.vj = ins.pc;
             }
             if (ins.FTYPE != IMM && ins.TYPE != JAL) {
@@ -334,6 +347,9 @@ private:
         }
 
         ROInfo u(ins.TYPE, ins.FTYPE, ins.rd, ins.pc, (ins.TYPE == HALT), lsb_pos, pos);
+        if (ins.FTYPE == BRANCH) {
+            u.pred_pc = ins.pred_pc;
+        }
         newro.push_back(u);
 
         if (ins.FTYPE != BRANCH && ins.FTYPE != STORE && ins.TYPE != HALT) {
@@ -342,6 +358,7 @@ private:
     }
 
     void RollBack() {
+//std::cerr << "rollback" << std::endl;
         for (int i = 0; i < 32; ++i) {
             cur.regfile[i].busy = 0;
             cur.regfile[i].qi = -1;
@@ -361,7 +378,7 @@ private:
 
     bool RunCommit() {
         for (auto x : can_commit) {
-//std::cerr << "commit " << x.pc << ' ' << x.op << std::endl; 
+//std::cerr << "commit " << std::hex << x.pc << ' ' << x.op << ' ' << x.rd << ' ' << x.val << std::endl; 
             if (x.op == HALT) {
                 return 0;
             }
@@ -370,16 +387,24 @@ private:
                     reg[x.rd] = x.pc + 4;
                     rf_unlock.push_back(Pair<int, int>(x.rd, x.rob_pos));
                 }
-                if (x.op == JALR) {
+                if (x.op == JAL) {
+                    if (x.val != 4) {
+                        RollBack();
+                        PC = x.pc + x.val;
+                    }
+                } else if (x.op == JALR) {
                     if (x.val != x.pc + 4) {
                         RollBack();
                         PC = x.val;
                     }
                 } else {
-                    if (x.val != 4) {
+                    if (x.pc + x.val != x.pred_pc) {
                         RollBack();
                         PC = x.pc + x.val;
-//std::cerr << "branch " << x.val << ' ' << PC << std::endl;
+                        predictor.update(x.pc, x.pred_pc == x.pc + 4);
+                    } else {
+                        ++success_cnt;
+                        predictor.update(x.pc, x.pred_pc != x.pc + 4);
                     }
                 }
             } else if (x.func == STORE) {
@@ -395,6 +420,21 @@ private:
     }
 
 public:
+    Tomasulo_Simulator() {
+        clk = branch_cnt = success_cnt = 0;
+    }
+
+    ~Tomasulo_Simulator() {
+        std::cerr << "total clk : " << clk << std::endl;
+        if (branch_cnt == 0) {
+            std::cerr << "no branch" << std::endl;
+        } else {
+            std::cerr << "total branch: " << branch_cnt << std::endl;
+            std::cerr << "successful prediction: " << success_cnt << std::endl;
+            std::cerr << "success rate: " << 1.0 * success_cnt / branch_cnt << std::endl;
+        }
+    }
+
     void input() {
         char s[100];
         int ptr;
@@ -409,7 +449,6 @@ public:
 
     void run() {
         PC = 0;
-        uint clk = 0;
         while (871) {
             ++clk;
 //std::cerr << "clk  " << clk << std::endl;
@@ -426,7 +465,6 @@ public:
             }
         }
         printf("%u\n", reg[10] & 255u);
-        //printf("%u\n", clk);
     }
 };
 
